@@ -1,48 +1,36 @@
-from peewee import fn
-from playhouse.shortcuts import model_to_dict
-from app.models.user import User
+import time
+import random
+import logging
+from functools import wraps
+from peewee import OperationalError, InterfaceError
 
-def peewee_chunked(iterable, n):
-    for i in range(0, len(iterable), n):
-        yield iterable[i:i + n]
+logger = logging.getLogger(__name__)
 
-def serialize_user(user):
-    dt_str = user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at)
-    return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "created_at": dt_str.replace(" ", "T")
-    }
+RETRYABLE_ERRORS = (OperationalError, InterfaceError, ConnectionError)
 
-def serialize_event(event):
-    return {
-        "id": event.id,
-        "url_id": event.url_id,
-        "user_id": event.user_id,
-        "event_type": event.event_type,
-        "timestamp": event.timestamp.isoformat() if hasattr(event.timestamp, 'isoformat') else str(event.timestamp),
-        "details": event.details
-    }
+def retry_db(max_retries=3, base_delay=0.05):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return fn(*args, **kwargs)
+                except RETRYABLE_ERRORS as e:
+                    # force reconnect (important for pooled connections)
+                    from app.database import db
+                    db.close()
+                    db.connect(reuse_if_open=True)
 
-def serialize_url(url):
-    return {
-        "id": url.id,
-        "user_id": url.user_id,
-        "short_code": url.short_code,
-        "original_url": url.original_url,
-        "title": url.title,
-        "is_active": url.is_active,
-        "created_at": url.created_at.isoformat() if hasattr(url.created_at, 'isoformat') else str(url.created_at),
-        "updated_at": url.updated_at.isoformat() if hasattr(url.updated_at, 'isoformat') else str(url.updated_at)
-    }
+                    if attempt == max_retries - 1:
+                        logger.error(f"All {max_retries} retries exhausted for {fn.__name__}: {e}")
+                        raise
 
-
-
-def get_users(page: int, per_page: int):
-    if page is None or per_page is None:
-        query = User.select()
-    else:
-        query = User.select().paginate(page, per_page)
-    
-    return [serialize_user(user) for user in query]
+                    delay = base_delay * (2 ** attempt)
+                    jitter = random.uniform(0, delay * 0.2)
+                    logger.warning(
+                        f"Retry {attempt + 1}/{max_retries} for {fn.__name__} "
+                        f"after {delay + jitter:.3f}s: {e}"
+                    )
+                    time.sleep(delay + jitter)
+        return wrapper
+    return decorator

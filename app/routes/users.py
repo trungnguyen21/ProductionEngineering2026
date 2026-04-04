@@ -11,10 +11,12 @@ from app.services.users_services import (
     delete_user,
     serialize_user,
 )
+from app.services.services import limiter
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
 @users_bp.route('/bulk', methods=['POST'])
+@limiter.limit("5/minute")
 def upload_users():
     """
     Upload users via CSV file
@@ -101,6 +103,7 @@ def get_user(user_id):
         return jsonify({"error": "User not found"}), 404
 
 @users_bp.route('', methods=['POST'])
+@limiter.limit("10/minute")
 def create_user_route():
     """
     Create a new user

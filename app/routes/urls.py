@@ -1,19 +1,18 @@
-import string
-import secrets
-import datetime
 from flask import Blueprint, request, jsonify
-from app.models.url import Url
+
 from app.models.user import User
-from app.services.services import serialize_url
+from app.services.urls_services import (
+    serialize_url,
+    create_url,
+    list_urls,
+    get_url_by_id,
+    update_url,
+)
 
 urls_bp = Blueprint('urls', __name__, url_prefix='/urls')
 
-def generate_short_code(length=6):
-    alphabet = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
-
 @urls_bp.route('', methods=['POST'])
-def create_url():
+def create_url_route():
     """
     Create a new URL
     ---
@@ -38,8 +37,6 @@ def create_url():
       404:
         description: User not found
     """
-    Url.create_table(safe=True)
-    
     data = request.get_json()
     if not data:
         return jsonify({"error": "No JSON payload provided"}), 400
@@ -54,32 +51,16 @@ def create_url():
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
         
-    # Generate unique short code
-    while True:
-        short_code = generate_short_code()
-        if not Url.select().where(Url.short_code == short_code).exists():
-            break
-            
     try:
-        try:
-            user = User.get(User.id == user_id)
-        except User.DoesNotExist:
-            return jsonify({"error": f"User {user_id} not found"}), 404
-            
-        url_entry = Url.create(
-            user=user,
-            short_code=short_code,
-            original_url=original_url,
-            title=title,
-            created_at=datetime.datetime.now(),
-            updated_at=datetime.datetime.now()
-        )
+        url_entry = create_url(user_id=user_id, original_url=original_url, title=title)
         return jsonify(serialize_url(url_entry)), 201
+    except User.DoesNotExist:
+        return jsonify({"error": f"User {user_id} not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 @urls_bp.route('', methods=['GET'])
-def list_urls():
+def list_urls_route():
     """
     List all URLs
     ---
@@ -92,14 +73,9 @@ def list_urls():
       200:
         description: A list of URL objects
     """
-    Url.create_table(safe=True)
     user_id = request.args.get('user_id', type=int)
-    
-    query = Url.select()
-    if user_id is not None:
-        query = query.where(Url.user_id == user_id)
-        
-    return jsonify([serialize_url(url) for url in query])
+    urls = list_urls(user_id=user_id)
+    return jsonify([serialize_url(url) for url in urls])
 
 @urls_bp.route('/<int:url_id>', methods=['GET'])
 def get_url(url_id):
@@ -117,15 +93,14 @@ def get_url(url_id):
       404:
         description: URL not found
     """
-    Url.create_table(safe=True)
     try:
-        url = Url.get(Url.id == url_id)
+        url = get_url_by_id(url_id)
         return jsonify(serialize_url(url)), 200
-    except Url.DoesNotExist:
+    except Exception:
         return jsonify({"error": "URL not found"}), 404
 
 @urls_bp.route('/<int:url_id>', methods=['PUT'])
-def update_url(url_id):
+def update_url_route(url_id):
     """
     Update URL details
     ---
@@ -152,22 +127,16 @@ def update_url(url_id):
       404:
         description: URL not found
     """
-    Url.create_table(safe=True)
     data = request.get_json()
     if not data:
         return jsonify({"error": "No JSON payload provided"}), 400
         
     try:
-        url = Url.get(Url.id == url_id)
-    except Url.DoesNotExist:
+        url = update_url(
+            url_id,
+            title=data.get("title"),
+            is_active=data.get("is_active"),
+        )
+        return jsonify(serialize_url(url)), 200
+    except Exception:
         return jsonify({"error": "URL not found"}), 404
-        
-    if "title" in data:
-        url.title = data["title"]
-    if "is_active" in data:
-        url.is_active = data["is_active"]
-        
-    url.updated_at = datetime.datetime.now()
-    url.save()
-    
-    return jsonify(serialize_url(url)), 200

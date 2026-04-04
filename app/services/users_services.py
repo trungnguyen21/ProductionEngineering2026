@@ -64,6 +64,14 @@ def update_user(user_id: int, username: str = None, email: str = None):
 
 
 @retry_db()
+def delete_user(user_id: int):
+    """Delete a user by ID. Raises User.DoesNotExist if not found."""
+    user = User.get(User.id == user_id)
+    user.delete_instance()
+    return user
+
+
+@retry_db()
 def bulk_import_users(file_stream):
     """
     Import users from a CSV file stream.

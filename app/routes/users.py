@@ -8,6 +8,7 @@ from app.services.users_services import (
     get_user_by_id,
     create_user,
     update_user,
+    delete_user,
     serialize_user,
 )
 
@@ -192,3 +193,26 @@ def update_user_route(user_id):
         return jsonify({"error": "User not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@users_bp.route('/<int:user_id>', methods=['DELETE'])
+def delete_user_route(user_id):
+    """
+    Delete a user by ID
+    ---
+    parameters:
+      - name: user_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: User deleted
+      404:
+        description: User not found
+    """
+    try:
+        user = delete_user(user_id)
+        return jsonify(serialize_user(user)), 200
+    except Exception:
+        return jsonify({"error": "User not found"}), 404

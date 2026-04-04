@@ -52,13 +52,31 @@ def create_url(user_id: int, original_url: str, title: str = None):
 
 
 @retry_db()
-def list_urls(user_id: int = None):
-    """List all URLs, optionally filtered by user_id."""
+def list_urls(user_id: int = None, is_active: bool = None):
+    """List all URLs, optionally filtered by user_id and/or is_active."""
     Url.create_table(safe=True)
     query = Url.select()
     if user_id is not None:
         query = query.where(Url.user_id == user_id)
+    if is_active is not None:
+        query = query.where(Url.is_active == is_active)
     return list(query)
+
+
+@retry_db()
+def get_url_by_short_code(short_code: str):
+    """Get a URL by its short code. Raises Url.DoesNotExist if not found."""
+    Url.create_table(safe=True)
+    return Url.get(Url.short_code == short_code)
+
+
+@retry_db()
+def delete_url(url_id: int):
+    """Delete a URL by ID. Raises Url.DoesNotExist if not found."""
+    Url.create_table(safe=True)
+    url = Url.get(Url.id == url_id)
+    url.delete_instance()
+    return url
 
 
 @retry_db()

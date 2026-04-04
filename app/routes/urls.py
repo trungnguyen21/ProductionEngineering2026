@@ -60,6 +60,8 @@ def create_url_route():
         
     try:
         url_entry = create_url(user_id=user_id, original_url=original_url, title=title)
+        # Invalidate list cache
+        cache_delete("urls:list:*")
         return jsonify(serialize_url(url_entry)), 201
     except User.DoesNotExist:
         return jsonify({"error": f"User {user_id} not found"}), 404
@@ -90,8 +92,17 @@ def list_urls_route():
     is_active = None
     if is_active_str is not None:
         is_active = is_active_str.lower() in ('true', '1', 'yes')
+
+    # Simple cache key based on filters
+    cache_key = f"urls:list:u{user_id}:a{is_active}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+
     urls = list_urls(user_id=user_id, is_active=is_active)
-    return jsonify([serialize_url(url) for url in urls])
+    serialized = [serialize_url(url) for url in urls]
+    cache_set(cache_key, serialized, ttl_seconds=60)  # Short TTL for list
+    return jsonify(serialized)
 
 
 @urls_bp.route('/<string:short_code>/redirect', methods=['GET'])
@@ -155,9 +166,17 @@ def get_url(url_id):
       404:
         description: URL not found
     """
+    # Check cache
+    cache_key = f"url:{url_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached), 200
+
     try:
         url = get_url_by_id(url_id)
-        return jsonify(serialize_url(url)), 200
+        serialized = serialize_url(url)
+        cache_set(cache_key, serialized, ttl_seconds=300)
+        return jsonify(serialized), 200
     except Exception:
         return jsonify({"error": "URL not found"}), 404
 
@@ -180,6 +199,10 @@ def delete_url_route(url_id):
     """
     try:
         url = delete_url(url_id)
+        # Invalidate caches
+        cache_delete(f"url:{url_id}")
+        cache_delete(f"redirect:{url.short_code}")
+        cache_delete("urls:list:*")
         return jsonify(serialize_url(url)), 200
     except Exception:
         return jsonify({"error": "URL not found"}), 404
@@ -223,8 +246,10 @@ def update_url_route(url_id):
             title=data.get("title"),
             is_active=data.get("is_active"),
         )
-        # Invalidate redirect cache when URL is updated
+        # Invalidate caches
+        cache_delete(f"url:{url_id}")
         cache_delete(f"redirect:{url.short_code}")
+        cache_delete("urls:list:*")
         return jsonify(serialize_url(url)), 200
     except Exception:
         return jsonify({"error": "URL not found"}), 404

@@ -32,6 +32,7 @@ def cache_get(key: str):
         val = r.get(key)
         return json.loads(val) if val else None
     except Exception:
+        logger.warning("Redis cache is down... Resolving database.")
         return None
 
 
@@ -43,15 +44,22 @@ def cache_set(key: str, value, ttl_seconds: int = 300):
     try:
         r.setex(key, ttl_seconds, json.dumps(value))
     except Exception:
+        logger.warning("Redis cache is down... Resolving database.")
         pass
 
 
 def cache_delete(key: str):
-    """Delete a key from cache. Silently fails if Redis is down."""
+    """Delete a key or pattern (e.g. 'urls:*') from cache. Silently fails if Redis is down."""
     r = get_redis()
     if r is None:
         return
     try:
-        r.delete(key)
+        if "*" in key:
+            keys = r.keys(key)
+            if keys:
+                r.delete(*keys)
+        else:
+            r.delete(key)
     except Exception:
+        logger.warning("Redis cache is down... Resolving database.")
         pass

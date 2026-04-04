@@ -1,54 +1,65 @@
+import logging
 import os
 import time
-import logging
 
 from flask import jsonify
-
-from peewee import DatabaseProxy, Model, OperationalError, InterfaceError
+from peewee import DatabaseProxy, Model, OperationalError
 from playhouse.pool import PooledPostgresqlDatabase
+
+from app.observability.metrics import (
+    DB_ERRORS_TOTAL,
+    DB_QUERY_DURATION_SECONDS,
+    observe_db_pool_state,
+)
 
 db = DatabaseProxy()
 logger = logging.getLogger(__name__)
+
 
 class BaseModel(Model):
     class Meta:
         database = db
 
+
 class ObservableDatabasePool(PooledPostgresqlDatabase):
-    # Override the execute_sql method to hook up logging
     def execute_sql(self, sql, params=None):
-        start = time.time()
-        error = None
+        start = time.perf_counter()
+        operation = (sql or "unknown").strip().split(" ", 1)[0].lower() or "unknown"
 
         try:
             return super().execute_sql(sql, params=params)
-        except Exception as e:
-            error = str(e)
+        except Exception as exc:
+            DB_ERRORS_TOTAL.labels(operation=operation, error_type=type(exc).__name__).inc()
+            logger.exception(
+                "db.query.failed",
+                extra={"operation": operation, "query_preview": (sql or "")[:120]},
+            )
             raise
         finally:
-            duration_ms = (time.time() - start) * 1000
+            duration_s = time.perf_counter() - start
+            DB_QUERY_DURATION_SECONDS.labels(operation=operation).observe(duration_s)
+            observe_db_pool_state(self)
 
             logger.info(
-                "db_query",
+                "db.query.completed",
                 extra={
-                    "duration_ms": round(duration_ms, 2),
-                    "query": sql[:100],  # truncate for safety
-                    "error": error,
-                }
+                    "operation": operation,
+                    "duration_ms": round(duration_s * 1000, 2),
+                },
             )
 
 
 def init_db(app):
     database = ObservableDatabasePool(
         database=os.environ.get("DATABASE_NAME", "hackathon_db"),
-        max_connections=20,
-        timeout=5,              # wait max 5 seconds for a free connection
-        stale_timeout=300,      # replace idle connection
+        max_connections=int(os.environ.get("DATABASE_MAX_CONNECTIONS", 20)),
+        timeout=int(os.environ.get("DATABASE_POOL_TIMEOUT", 5)),
+        stale_timeout=int(os.environ.get("DATABASE_STALE_TIMEOUT", 300)),
         host=os.environ.get("DATABASE_HOST", "localhost"),
         port=int(os.environ.get("DATABASE_PORT", 5432)),
         user=os.environ.get("DATABASE_USER", "postgres"),
         password=os.environ.get("DATABASE_PASSWORD", "postgres"),
-        options='-c statement_timeout=2000'  # 2 seconds timeout for each statement
+        options="-c statement_timeout=2000",
     )
     db.initialize(database)
 
@@ -56,26 +67,16 @@ def init_db(app):
     def _db_connect():
         try:
             db.connect(reuse_if_open=True)
+            observe_db_pool_state(database)
         except Exception:
-            # TODO: add logging
-            pass
+            logger.exception("db.connect.failed")
 
     @app.teardown_request
-    def _db_close(exec):
+    def _db_close(_exc):
         if not db.is_closed():
             db.close()
+            observe_db_pool_state(database)
 
     @app.errorhandler(OperationalError)
-    def handle_db_error(e):
-        return jsonify({
-            "error": "database_unavailable",
-            "message": "Service temporarily degraded"
-        }), 503
-
-    @app.route("/ready")
-    def db_health():
-        try: 
-            db.execute_sql("SELECT 1;")
-            return jsonify({"status": "healthy"}), 200
-        except Exception:
-            return jsonify({"status": "database not ready"}), 500
+    def handle_db_error(_e):
+        return jsonify({"error": "database_unavailable", "message": "Service temporarily degraded"}), 503

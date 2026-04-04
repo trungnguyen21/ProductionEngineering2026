@@ -6,8 +6,11 @@ import peewee
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flasgger import Swagger
+from prometheus_flask_exporter import PrometheusMetrics
 
 from app.database import init_db
+from app.observability.logging import configure_logging, setup_request_logging
+from app.observability.metrics import setup_http_metrics
 from app.routes import register_routes
 from app.services.services import limiter
 
@@ -15,9 +18,16 @@ logger = logging.getLogger(__name__)
 
 def create_app():
     load_dotenv()
+    configure_logging()
 
     app = Flask(__name__)
     Swagger(app)
+    metrics_enabled = os.environ.get("METRICS_ENABLED", "true").lower() == "true"
+    if metrics_enabled:
+        PrometheusMetrics(app)
+        setup_http_metrics(app)
+
+    setup_request_logging(app)
     init_db(app)
 
     # Initialize rate limiter with Redis (falls back to in-memory)
@@ -40,6 +50,11 @@ def create_app():
         status = "ok" if db_ok else "degraded"
         code = 200 if db_ok else 503
         return jsonify(status=status, db=db_ok), code
+
+    @app.route("/ready")
+    def ready():
+        # A simpler check for Docker's healthcheck
+        return jsonify(status="ready"), 200
 
     # ── Global JSON error handlers ──────────────────────────────────────────
 

@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 
 from app.services.events_services import list_events, create_event, serialize_event
+from app.services.services import limiter
 
 events_bp = Blueprint('events', __name__, url_prefix='/events')
 
@@ -19,6 +20,7 @@ def list_events_route():
 
 
 @events_bp.route('', methods=['POST'])
+@limiter.limit("30/minute")
 def create_event_route():
     """
     Create a new Event

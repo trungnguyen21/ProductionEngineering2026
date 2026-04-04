@@ -11,11 +11,14 @@ from app.services.urls_services import (
     delete_url,
 )
 from app.services.events_services import create_event
+from app.services.cache import cache_get, cache_set, cache_delete
+from app.services.services import limiter
 
 urls_bp = Blueprint('urls', __name__, url_prefix='/urls')
 
 
 @urls_bp.route('', methods=['POST'])
+@limiter.limit("20/minute")
 def create_url_route():
     """
     Create a new URL
@@ -107,21 +110,33 @@ def redirect_short_code(short_code):
       404:
         description: Short code not found or URL inactive
     """
-    try:
-        url = get_url_by_short_code(short_code)
-    except Exception:
-        return jsonify({"error": "Short code not found"}), 404
+    # Check Redis cache first
+    cache_key = f"redirect:{short_code}"
+    cached = cache_get(cache_key)
+    if cached:
+        original_url = cached["original_url"]
+        url_id = cached["url_id"]
+    else:
+        try:
+            url = get_url_by_short_code(short_code)
+        except Exception:
+            return jsonify({"error": "Short code not found"}), 404
 
-    if not url.is_active:
-        return jsonify({"error": "URL is not active"}), 410
+        if not url.is_active:
+            return jsonify({"error": "URL is not active"}), 410
+
+        original_url = url.original_url
+        url_id = url.id
+        # Cache for 5 minutes
+        cache_set(cache_key, {"original_url": original_url, "url_id": url_id, "is_active": url.is_active}, ttl_seconds=300)
 
     # Hidden bonus: auto-create a "redirect" event for observability
     try:
-        create_event(url_id=url.id, event_type="redirect", details={"referrer": request.referrer})
+        create_event(url_id=url_id, event_type="redirect", details={"referrer": request.referrer})
     except Exception:
         pass  # Don't fail the redirect if event creation fails
 
-    return redirect(url.original_url, code=302)
+    return redirect(original_url, code=302)
 
 
 @urls_bp.route('/<int:url_id>', methods=['GET'])
@@ -208,6 +223,8 @@ def update_url_route(url_id):
             title=data.get("title"),
             is_active=data.get("is_active"),
         )
+        # Invalidate redirect cache when URL is updated
+        cache_delete(f"redirect:{url.short_code}")
         return jsonify(serialize_url(url)), 200
     except Exception:
         return jsonify({"error": "URL not found"}), 404

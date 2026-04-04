@@ -1,10 +1,16 @@
 import time
 import random
 import logging
+
 from functools import wraps
+
 from peewee import OperationalError, InterfaceError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 logger = logging.getLogger(__name__)
+
+limiter = Limiter(key_func=get_remote_address)
 
 RETRYABLE_ERRORS = (OperationalError, InterfaceError, ConnectionError)
 

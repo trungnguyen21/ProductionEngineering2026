@@ -61,7 +61,7 @@ def init_db(app):
             pass
 
     @app.teardown_request
-    def _db_close():
+    def _db_close(exec):
         if not db.is_closed():
             db.close()
 

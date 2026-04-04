@@ -14,33 +14,35 @@ services:
       - app-bridge
 
   web:
-    ports: []
+    ports: !reset []
     networks:
       - app-bridge
 
   grafana:
-    ports:
-      - "3000:3000"
+    ports: !reset []
+    environment:
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:8080/grafana/}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     networks:
       - app-bridge
 
   prometheus:
-    ports: []
+    ports: !reset []
     networks:
       - app-bridge
 
   cadvisor:
-    ports: []
+    ports: !reset []
     networks:
       - app-bridge
 
   db:
-    ports: []
+    ports: !reset []
     networks:
       - app-bridge
 
   redis:
-    ports: []
+    ports: !reset []
     networks:
       - app-bridge
 

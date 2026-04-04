@@ -31,12 +31,18 @@ nano .env
 - Use the hardened override for secure deployment:
 
 ```
-docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+```
+
+- Option A (no custom domain): set Grafana subpath URL in `.env`:
+
+```
+GF_SERVER_ROOT_URL=http://<your-vps-ip>:8080/grafana/
 ```
 
 - This will:
   - Start all services
-  - Only expose Nginx on port 80
+  - Only expose Nginx on port 8080
   - All other services are internal-only
 
 ## 4. Access the Application

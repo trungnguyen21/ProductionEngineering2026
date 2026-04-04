@@ -8,7 +8,6 @@ services:
       - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - web
-      - grafana
     restart: unless-stopped
     networks:
       - edge
@@ -20,10 +19,8 @@ services:
       - app-bridge
 
   grafana:
-    ports: []
-    environment:
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    ports:
+      - "3000:3000"
     networks:
       - app-bridge
 

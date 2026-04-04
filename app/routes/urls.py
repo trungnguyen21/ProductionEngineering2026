@@ -99,7 +99,7 @@ def list_urls():
     if user_id is not None:
         query = query.where(Url.user_id == user_id)
         
-    return jsonify([serialize_url(url) for url in query])
+    return jsonify([serialize_url(url) for url in query]), 500
 
 @urls_bp.route('/<int:url_id>', methods=['GET'])
 def get_url(url_id):

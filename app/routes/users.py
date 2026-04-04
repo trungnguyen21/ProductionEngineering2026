@@ -1,8 +1,6 @@
 import csv
 import io
 import peewee
-import datetime
-
 from datetime import datetime
 
 from flask import Blueprint, request, jsonify
@@ -156,7 +154,7 @@ def create_user():
         return jsonify({"error": "username and email must be strings"}), 400
         
     try:
-        user = User.create(username=username, email=email, created_at=datetime.datetime.now())
+        user = User.create(username=username, email=email, created_at=datetime.now())
         return jsonify(serialize_user(user)), 201
     except peewee.IntegrityError:
         return jsonify({"error": "username or email already exists"}), 409

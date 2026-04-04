@@ -7,11 +7,12 @@ def peewee_chunked(iterable, n):
         yield iterable[i:i + n]
 
 def serialize_user(user):
+    dt_str = user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at)
     return {
         "id": user.id,
         "username": user.username,
         "email": user.email,
-        "created_at": str(user.created_at)
+        "created_at": dt_str.replace(" ", "T")
     }
 
 def get_users(page: int, per_page: int):

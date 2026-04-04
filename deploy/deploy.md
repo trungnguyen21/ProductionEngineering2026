@@ -31,7 +31,7 @@ nano .env
 - Use the hardened override for secure deployment:
 
 ```
-docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
 ```
 
 - This will:

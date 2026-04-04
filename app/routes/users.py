@@ -7,7 +7,7 @@ from flask import Blueprint, request, jsonify
 
 from app.models.user import User
 from app.database import db
-from app.services.user_services import peewee_chunked, get_users, serialize_user
+from app.services.services import peewee_chunked, get_users, serialize_user
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 

@@ -2,9 +2,7 @@ import datetime
 from app.models.user import User
 from app.models.url import Url
 from app.models.event import Event
-from app.services.user_services import serialize_user
-from app.services.url_services import serialize_url
-from app.services.event_services import serialize_event
+from app.services.services import serialize_user, serialize_url, serialize_event
 
 def test_serialize_user(app):
     user = User(id=1, username="test", email="test@test.com", created_at=datetime.datetime(2025, 1, 1))

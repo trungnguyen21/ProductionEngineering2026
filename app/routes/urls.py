@@ -4,8 +4,7 @@ import datetime
 from flask import Blueprint, request, jsonify
 from app.models.url import Url
 from app.models.user import User
-from app.services.url_services import serialize_url
-import peewee
+from app.services.services import serialize_url
 
 urls_bp = Blueprint('urls', __name__, url_prefix='/urls')
 

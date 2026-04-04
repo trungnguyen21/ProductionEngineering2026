@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 from app.models.event import Event
-from app.services.event_services import serialize_event
+from app.services.services import serialize_event
 
 events_bp = Blueprint('events', __name__, url_prefix='/events')
 

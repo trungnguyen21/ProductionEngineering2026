@@ -1,0 +1,739 @@
+{
+	"annotations": {
+		"list": [
+			{
+				"builtIn": 1,
+				"datasource": {
+					"type": "grafana",
+					"uid": "-- Grafana --"
+				},
+				"enable": true,
+				"hide": true,
+				"iconColor": "rgba(0, 211, 255, 1)",
+				"name": "Annotations & Alerts",
+				"type": "dashboard"
+			}
+		]
+	},
+	"editable": true,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"links": [],
+	"liveNow": false,
+	"panels": [
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "reqps"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 7,
+				"w": 8,
+				"x": 0,
+				"y": 0
+			},
+			"id": 1,
+			"options": {
+				"colorMode": "value",
+				"graphMode": "area",
+				"justifyMode": "auto",
+				"orientation": "auto",
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"textMode": "auto"
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "sum(rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval]))",
+					"legendFormat": "rps",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "Traffic: Requests Per Second",
+			"type": "stat"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "thresholds"
+					},
+					"decimals": 2,
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "green",
+								"value": null
+							},
+							{
+								"color": "yellow",
+								"value": 1
+							},
+							{
+								"color": "red",
+								"value": 5
+							}
+						]
+					},
+					"unit": "percent"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 7,
+				"w": 8,
+				"x": 8,
+				"y": 0
+			},
+			"id": 2,
+			"options": {
+				"colorMode": "value",
+				"graphMode": "area",
+				"justifyMode": "auto",
+				"orientation": "auto",
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"textMode": "auto"
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "100 * sum(rate(http_request_errors_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])) / clamp_min(sum(rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])), 1)",
+					"legendFormat": "error_ratio_pct",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "Errors: HTTP Error Ratio",
+			"type": "stat"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "thresholds"
+					},
+					"decimals": 0,
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "green",
+								"value": null
+							},
+							{
+								"color": "yellow",
+								"value": 70
+							},
+							{
+								"color": "red",
+								"value": 90
+							}
+						]
+					},
+					"unit": "percent"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 7,
+				"w": 8,
+				"x": 16,
+				"y": 0
+			},
+			"id": 3,
+			"options": {
+				"colorMode": "value",
+				"graphMode": "area",
+				"justifyMode": "auto",
+				"orientation": "auto",
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"textMode": "auto"
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "100 * max(db_pool_in_use) / clamp_min(max(db_pool_in_use + db_pool_available), 1)",
+					"legendFormat": "db_pool_usage_pct",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "Saturation: DB Pool Usage",
+			"type": "stat"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "reqps"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 0,
+				"y": 7
+			},
+			"id": 4,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "table",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "none"
+				}
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "sum by (route) (rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval]))",
+					"legendFormat": "{{route}}",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "Traffic By Route",
+			"type": "timeseries"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "s"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 12,
+				"y": 7
+			},
+			"id": 5,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "list",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "none"
+				}
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket{route=~\"$route\",method=~\"$method\"}[$__rate_interval])))",
+					"legendFormat": "p50",
+					"range": true,
+					"refId": "A"
+				},
+				{
+					"editorMode": "code",
+					"expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{route=~\"$route\",method=~\"$method\"}[$__rate_interval])))",
+					"legendFormat": "p95",
+					"range": true,
+					"refId": "B"
+				},
+				{
+					"editorMode": "code",
+					"expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{route=~\"$route\",method=~\"$method\"}[$__rate_interval])))",
+					"legendFormat": "p99",
+					"range": true,
+					"refId": "C"
+				}
+			],
+			"title": "Latency: p50/p95/p99",
+			"type": "timeseries"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "reqps"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 0,
+				"y": 15
+			},
+			"id": 6,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "table",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "none"
+				}
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "sum by (status) (rate(http_request_errors_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval]))",
+					"legendFormat": "status {{status}}",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "Errors By Status",
+			"type": "timeseries"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "short"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 12,
+				"y": 15
+			},
+			"id": 7,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "list",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "none"
+				}
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "db_pool_in_use",
+					"legendFormat": "in_use",
+					"range": true,
+					"refId": "A"
+				},
+				{
+					"editorMode": "code",
+					"expr": "db_pool_available",
+					"legendFormat": "available",
+					"range": true,
+					"refId": "B"
+				}
+			],
+			"title": "Saturation: DB Pool In Use vs Available",
+			"type": "timeseries"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "ops"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 0,
+				"y": 23
+			},
+			"id": 8,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "list",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "none"
+				}
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "sum(rate(db_retry_attempts_total[$__rate_interval]))",
+					"legendFormat": "retry_attempts",
+					"range": true,
+					"refId": "A"
+				},
+				{
+					"editorMode": "code",
+					"expr": "sum(rate(db_retries_exhausted_total[$__rate_interval]))",
+					"legendFormat": "retries_exhausted",
+					"range": true,
+					"refId": "B"
+				}
+			],
+			"title": "DB Reliability: Retry Attempts and Exhaustion",
+			"type": "timeseries"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "thresholds"
+					},
+					"decimals": 2,
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "red",
+								"value": null
+							},
+							{
+								"color": "yellow",
+								"value": 95
+							},
+							{
+								"color": "green",
+								"value": 99
+							}
+						]
+					},
+					"unit": "percent"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 8,
+				"y": 23
+			},
+			"id": 9,
+			"options": {
+				"colorMode": "value",
+				"graphMode": "area",
+				"justifyMode": "auto",
+				"orientation": "auto",
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"textMode": "auto"
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "100 - (100 * sum(rate(http_request_errors_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])) / clamp_min(sum(rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])), 1))",
+					"legendFormat": "availability_pct",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "SLI: Availability",
+			"type": "stat"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "thresholds"
+					},
+					"decimals": 2,
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "red",
+								"value": null
+							},
+							{
+								"color": "yellow",
+								"value": 80
+							},
+							{
+								"color": "green",
+								"value": 95
+							}
+						]
+					},
+					"unit": "percent"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 8,
+				"x": 16,
+				"y": 23
+			},
+			"id": 10,
+			"options": {
+				"colorMode": "value",
+				"graphMode": "area",
+				"justifyMode": "auto",
+				"orientation": "auto",
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"textMode": "auto"
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "100 * sum(rate(cache_hits_total[$__rate_interval])) / clamp_min(sum(rate(cache_hits_total[$__rate_interval]) + rate(cache_misses_total[$__rate_interval])), 1)",
+					"legendFormat": "cache_hit_ratio_pct",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "Cache Hit Ratio",
+			"type": "stat"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "ops"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 0,
+				"y": 31
+			},
+			"id": 11,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "table",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "none"
+				}
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "sum by (operation, result) (rate(cache_operations_total[$__rate_interval]))",
+					"legendFormat": "{{operation}} / {{result}}",
+					"range": true,
+					"refId": "A"
+				}
+			],
+			"title": "Cache Operations By Result",
+			"type": "timeseries"
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "${DS_PROMETHEUS}"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"unit": "ops"
+				},
+				"overrides": []
+			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 12,
+				"y": 31
+			},
+			"id": 12,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "list",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"tooltip": {
+					"mode": "multi",
+					"sort": "none"
+				}
+			},
+			"targets": [
+				{
+					"editorMode": "code",
+					"expr": "sum(rate(short_url_create_total[$__rate_interval]))",
+					"legendFormat": "short_url_created",
+					"range": true,
+					"refId": "A"
+				},
+				{
+					"editorMode": "code",
+					"expr": "sum(rate(short_url_redirect_total[$__rate_interval]))",
+					"legendFormat": "short_url_redirects",
+					"range": true,
+					"refId": "B"
+				},
+				{
+					"editorMode": "code",
+					"expr": "sum(rate(short_url_not_found_total[$__rate_interval]))",
+					"legendFormat": "short_url_not_found",
+					"range": true,
+					"refId": "C"
+				}
+			],
+			"title": "Business Metrics: URL Create, Redirect, Not Found",
+			"type": "timeseries"
+		}
+	],
+	"refresh": "10s",
+	"schemaVersion": 39,
+	"style": "dark",
+	"tags": ["sre", "golden-signals", "flask", "prometheus"],
+	"templating": {
+		"list": [
+			{
+				"current": {
+					"selected": true,
+					"text": ".*",
+					"value": ".*"
+				},
+				"datasource": {
+					"type": "prometheus",
+					"uid": "${DS_PROMETHEUS}"
+				},
+				"definition": "label_values(http_requests_total, route)",
+				"hide": 0,
+				"includeAll": false,
+				"label": "Route Regex",
+				"multi": false,
+				"name": "route",
+				"options": [],
+				"query": {
+					"query": "label_values(http_requests_total, route)",
+					"refId": "Prometheus-route-Variable-Query"
+				},
+				"refresh": 2,
+				"regex": "",
+				"skipUrlSync": false,
+				"sort": 1,
+				"type": "textbox"
+			},
+			{
+				"current": {
+					"selected": true,
+					"text": ".*",
+					"value": ".*"
+				},
+				"hide": 0,
+				"label": "Method Regex",
+				"name": "method",
+				"options": [],
+				"query": ".*",
+				"skipUrlSync": false,
+				"type": "textbox"
+			}
+		]
+	},
+	"time": {
+		"from": "now-30m",
+		"to": "now"
+	},
+	"timepicker": {},
+	"timezone": "",
+	"title": "SRE Golden Signals - Flask Observability",
+	"uid": "sre-golden-signals-flask",
+	"version": 1,
+	"weekStart": ""
+}

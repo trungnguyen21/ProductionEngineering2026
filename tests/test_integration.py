@@ -64,12 +64,12 @@ def test_bulk_user_upload_integration(client):
 
 def test_create_url_for_non_existent_user(client):
     resp = client.post('/urls', json={
-        "user_id": 99999,
+        "user_id": -1,
         "original_url": "https://error.com",
         "title": "Error"
     })
     assert resp.status_code == 404
-    assert "User 99999 not found" in resp.json["error"]
+    assert "User -1 not found" in resp.json["error"]
 
 def test_user_pagination_integration(client):
     # Create 5 users

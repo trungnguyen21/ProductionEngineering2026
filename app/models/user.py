@@ -7,4 +7,4 @@ class User(BaseModel):
     created_at = DateTimeField()
 
     class Meta:
-        db_table = 'users'
+        table_name = 'users'

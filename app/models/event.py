@@ -13,4 +13,4 @@ class Event(BaseModel):
     details = JSONField(null=True)
 
     class Meta:
-        db_table = 'events'
+        table_name = 'events'

@@ -13,4 +13,4 @@ class Url(BaseModel):
     updated_at = DateTimeField(default=datetime.datetime.now)
 
     class Meta:
-        db_table = 'urls'
+        table_name = 'urls'

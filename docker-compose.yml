@@ -40,6 +40,9 @@ services:
     environment:
       - DATABASE_HOST=db
       - REDIS_URL=redis://redis:6379/0
+      - METRICS_ENABLED=true
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
     depends_on:
       db:
         condition: service_healthy
@@ -53,5 +56,44 @@ services:
       retries: 3
       start_period: 15s
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hackathon_prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hackathon_grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: hackathon_cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:

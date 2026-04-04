@@ -13,6 +13,11 @@ from app.services.urls_services import (
 from app.services.events_services import create_event
 from app.services.cache import cache_get, cache_set, cache_delete
 from app.services.services import limiter
+from app.observability.metrics import (
+    SHORT_URL_CREATE_TOTAL,
+    SHORT_URL_NOT_FOUND_TOTAL,
+    SHORT_URL_REDIRECT_TOTAL,
+)
 
 urls_bp = Blueprint('urls', __name__, url_prefix='/urls')
 
@@ -60,6 +65,7 @@ def create_url_route():
         
     try:
         url_entry = create_url(user_id=user_id, original_url=original_url, title=title)
+        SHORT_URL_CREATE_TOTAL.inc()
         # Invalidate list cache
         cache_delete("urls:list:*")
         return jsonify(serialize_url(url_entry)), 201
@@ -131,6 +137,7 @@ def redirect_short_code(short_code):
         try:
             url = get_url_by_short_code(short_code)
         except Exception:
+            SHORT_URL_NOT_FOUND_TOTAL.inc()
             return jsonify({"error": "Short code not found"}), 404
 
         if not url.is_active:
@@ -147,6 +154,7 @@ def redirect_short_code(short_code):
     except Exception:
         pass  # Don't fail the redirect if event creation fails
 
+    SHORT_URL_REDIRECT_TOTAL.inc()
     return redirect(original_url, code=302)
 
 

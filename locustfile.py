@@ -67,7 +67,7 @@ class AppObservabilityUser(HttpUser):
             if response.status_code != 200:
                 response.failure(f"unexpected status: {response.status_code}")
 
-    @task(5)
+    @task(8)
     def create_url_and_redirect(self) -> None:
         if not self.user_id:
             self._create_seed_user()

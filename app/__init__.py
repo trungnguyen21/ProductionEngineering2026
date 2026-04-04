@@ -6,6 +6,7 @@ import peewee
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flasgger import Swagger
+from prometheus_flask_exporter import PrometheusMetrics
 
 from app.database import init_db
 from app.routes import register_routes
@@ -18,6 +19,7 @@ def create_app():
 
     app = Flask(__name__)
     Swagger(app)
+    metrics = PrometheusMetrics(app)
     init_db(app)
 
     # Initialize rate limiter with Redis (falls back to in-memory)

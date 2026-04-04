@@ -8,10 +8,8 @@ WORKDIR /app
 # Install uv for fast dependency management
 RUN pip install --no-cache-dir uv
 
-RUN uv pip compile
-
 # Copy dependency files first for layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
 
 # Install dependencies into the system Python (no venv needed in container)
 RUN uv pip install --system --no-cache -r pyproject.toml

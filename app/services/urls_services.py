@@ -31,8 +31,6 @@ def create_url(user_id: int, original_url: str, title: str = None):
     Create a new shortened URL for a given user.
     Raises User.DoesNotExist if user not found.
     """
-    Url.create_table(safe=True)
-
     # Generate unique short code
     while True:
         short_code = generate_short_code()
@@ -54,7 +52,6 @@ def create_url(user_id: int, original_url: str, title: str = None):
 @retry_db()
 def list_urls(user_id: int = None, is_active: bool = None):
     """List all URLs, optionally filtered by user_id and/or is_active."""
-    Url.create_table(safe=True)
     query = Url.select()
     if user_id is not None:
         query = query.where(Url.user_id == user_id)
@@ -66,14 +63,12 @@ def list_urls(user_id: int = None, is_active: bool = None):
 @retry_db()
 def get_url_by_short_code(short_code: str):
     """Get a URL by its short code. Raises Url.DoesNotExist if not found."""
-    Url.create_table(safe=True)
     return Url.get(Url.short_code == short_code)
 
 
 @retry_db()
 def delete_url(url_id: int):
     """Delete a URL by ID. Raises Url.DoesNotExist if not found."""
-    Url.create_table(safe=True)
     url = Url.get(Url.id == url_id)
     url.delete_instance()
     return url
@@ -82,7 +77,6 @@ def delete_url(url_id: int):
 @retry_db()
 def get_url_by_id(url_id: int):
     """Get a single URL by ID. Raises Url.DoesNotExist if not found."""
-    Url.create_table(safe=True)
     return Url.get(Url.id == url_id)
 
 
@@ -92,7 +86,6 @@ def update_url(url_id: int, title: str = None, is_active: bool = None):
     Update an existing URL's fields.
     Raises Url.DoesNotExist if not found.
     """
-    Url.create_table(safe=True)
     url = Url.get(Url.id == url_id)
 
     if title is not None:

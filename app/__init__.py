@@ -8,7 +8,7 @@ from flask import Flask, jsonify
 from flasgger import Swagger
 from prometheus_flask_exporter import PrometheusMetrics
 
-from app.database import init_db
+from app.database import init_db, ensure_tables
 from app.observability.logging import configure_logging, setup_request_logging
 from app.observability.metrics import setup_http_metrics
 from app.routes import register_routes
@@ -29,6 +29,9 @@ def create_app():
 
     setup_request_logging(app)
     init_db(app)
+
+    # One-time schema bootstrap on app startup.
+    ensure_tables()
 
     # Initialize rate limiter with Redis (falls back to in-memory)
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

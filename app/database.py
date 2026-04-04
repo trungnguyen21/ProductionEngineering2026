@@ -80,3 +80,13 @@ def init_db(app):
     @app.errorhandler(OperationalError)
     def handle_db_error(_e):
         return jsonify({"error": "database_unavailable", "message": "Service temporarily degraded"}), 503
+
+
+def ensure_tables():
+    """Create core tables in dependency order if they do not exist."""
+    from app.models.user import User
+    from app.models.url import Url
+    from app.models.event import Event
+
+    with db.connection_context():
+        db.create_tables([User, Url, Event], safe=True)

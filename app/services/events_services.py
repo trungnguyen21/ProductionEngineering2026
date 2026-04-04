@@ -19,7 +19,6 @@ def serialize_event(event):
 @retry_db()
 def list_events():
     """List all events."""
-    Event.create_table(safe=True)
     return list(Event.select())
 
 
@@ -30,8 +29,6 @@ def create_event(url_id: int, event_type: str, user_id: int = None, details: dic
     Raises Url.DoesNotExist if url not found.
     Raises User.DoesNotExist if user_id provided but not found.
     """
-    Event.create_table(safe=True)
-
     url = Url.get(Url.id == url_id)
 
     user = None

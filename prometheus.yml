@@ -9,7 +9,7 @@ scrape_configs:
   - job_name: "flask-app"
     metrics_path: "/metrics"
     static_configs:
-      - targets: ["web:8000"]
+      - targets: ["hackathon_web_blue:8000", "hackathon_web_green:8000"]
 
   - job_name: "prometheus"
     static_configs:

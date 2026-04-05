@@ -1,7 +1,5 @@
-# Project Lazarus - Resurrection
+# Project Lazarus - Ressurection
 This is my journey over 24 hours adding everything I can to monitor a simple web app!
-
-See the [Architecture Diagram](ARCHITECTURE.md) for a visual overview of the system.
 
 ## 1. Implementing the URL shortener
 Using the template Flask + peewee + PostgreSQL:

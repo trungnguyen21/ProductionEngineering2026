@@ -6,8 +6,6 @@ services:
       - POSTGRES_DB=hackathon_db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -17,115 +15,123 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - infra
 
   redis:
     image: redis:alpine
     container_name: hackathon_redis
-    ports:
-      - "6379:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
-
-  web:
-    build: .
-    container_name: hackathon_web
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      - DATABASE_HOST=db
-      - REDIS_URL=redis://redis:6379/0
-      - METRICS_ENABLED=true
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/ready || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+    networks:
+      - infra
 
   prometheus:
     image: prom/prometheus:latest
     container_name: hackathon_prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-    ports:
-      - "9090:9090"
     restart: unless-stopped
+    networks:
+      - infra
 
   grafana:
     image: grafana/grafana:latest
     container_name: hackathon_grafana
-    ports:
-      - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost/grafana/}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     depends_on:
       - prometheus
     restart: unless-stopped
+    networks:
+      - infra
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: hackathon_cadvisor
-    ports:
-      - "8080:8080"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     restart: unless-stopped
+    networks:
+      - infra
 
   loki:
     image: grafana/loki:latest
     container_name: hackathon_loki
     volumes:
-      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
-      - ./loki-rules.yml:/loki/prom-rules/AppErrors/rules.yml:ro
+      - ../loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ../loki-rules.yml:/loki/prom-rules/AppErrors/rules.yml:ro
     command: -config.file=/etc/loki/local-config.yaml
-    ports:
-      - "3100:3100"
     restart: unless-stopped
+    networks:
+      - infra
 
   promtail:
     image: grafana/promtail:latest
     container_name: hackathon_promtail
     volumes:
-      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+      - ../promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     command: -config.file=/etc/promtail/config.yml
     restart: unless-stopped
+    networks:
+      - infra
 
   alertmanager:
     image: prom/alertmanager:latest
     container_name: hackathon_alertmanager
-    ports:
-      - "9093:9093"
     volumes:
-      - ./alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - ../alertmanager.yml:/etc/alertmanager/config.template.yml:ro
+    env_file:
+      - ../.env
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     command:
-      - '--config.file=/etc/alertmanager/config.yml'
+      - '--config.file=/etc/alertmanager/config.yml'    
     restart: unless-stopped
+    networks:
+      - infra
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./upstream.conf:/etc/nginx/conf.d/upstream.conf:ro
+    depends_on:
+      - grafana
+    restart: unless-stopped
+    networks:
+      - infra
+      - edge
 
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+
+networks:
+  infra:
+    driver: bridge
+    name: hackathon_infra
+  edge:
+    driver: bridge
+    name: hackathon_edge

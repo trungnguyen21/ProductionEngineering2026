@@ -1,0 +1,32 @@
+services:
+  web-green:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: hackathon_web_green
+    ports:
+      - "8002:8000"
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_HOST=hackathon_db
+      - REDIS_URL=redis://hackathon_redis:6379/0
+      - METRICS_ENABLED=true
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - hackathon_infra
+      - hackathon_edge
+
+networks:
+  hackathon_infra:
+    external: true
+  hackathon_edge:
+    external: true

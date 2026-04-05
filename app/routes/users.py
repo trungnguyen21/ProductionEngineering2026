@@ -1,17 +1,22 @@
-import csv
-import io
 import peewee
-from datetime import datetime
 
 from flask import Blueprint, request, jsonify
 
-from app.models.user import User
-from app.database import db
-from app.services.services import peewee_chunked, get_users, serialize_user
+from app.services.users_services import (
+    bulk_import_users,
+    get_users,
+    get_user_by_id,
+    create_user,
+    update_user,
+    delete_user,
+    serialize_user,
+)
+from app.services.services import limiter
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
 @users_bp.route('/bulk', methods=['POST'])
+@limiter.limit("5/minute")
 def upload_users():
     """
     Upload users via CSV file
@@ -38,30 +43,8 @@ def upload_users():
         return jsonify({"error": "No selected file"}), 400
 
     if file and file.filename.endswith('.csv'):
-        User.create_table(safe=True)
-        
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-        csv_input = csv.DictReader(stream)
-        
-        users_to_insert = []
-        for row in csv_input:
-            try:
-                created_at = datetime.strptime(row['created_at'], "%Y-%m-%d %H:%M:%S")
-            except (ValueError, KeyError):
-                created_at = datetime.now()
-            
-            users_to_insert.append({
-                'id': int(row['id']),
-                'username': row['username'],
-                'email': row['email'],
-                'created_at': created_at
-            })
-            
-        with db.atomic():
-            for batch in peewee_chunked(users_to_insert, 100):
-                User.insert_many(batch).on_conflict_ignore().execute()
-            
-        return jsonify({"imported": len(users_to_insert)}), 201
+        count = bulk_import_users(file.stream)
+        return jsonify({"imported": count}), 201
 
     return jsonify({"error": "Invalid file format. Please upload a CSV"}), 400
 
@@ -114,13 +97,14 @@ def get_user(user_id):
         description: User not found
     """
     try:
-        user = User.get(User.id == user_id)
+        user = get_user_by_id(user_id)
         return jsonify(serialize_user(user)), 200
-    except User.DoesNotExist:
+    except Exception:
         return jsonify({"error": "User not found"}), 404
 
 @users_bp.route('', methods=['POST'])
-def create_user():
+@limiter.limit("10/minute")
+def create_user_route():
     """
     Create a new user
     ---
@@ -154,7 +138,7 @@ def create_user():
         return jsonify({"error": "username and email must be strings"}), 400
         
     try:
-        user = User.create(username=username, email=email, created_at=datetime.now())
+        user = create_user(username=username, email=email)
         return jsonify(serialize_user(user)), 201
     except peewee.IntegrityError:
         return jsonify({"error": "username or email already exists"}), 409
@@ -162,7 +146,7 @@ def create_user():
         return jsonify({"error": str(e)}), 400
 
 @users_bp.route('/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
+def update_user_route(user_id):
     """
     Update an existing user
     ---
@@ -194,31 +178,44 @@ def update_user(user_id):
     data = request.get_json()
     if not data:
         return jsonify({"error": "No JSON payload provided"}), 400
-        
-    try:
-        user = User.get(User.id == user_id)
-    except User.DoesNotExist:
-        return jsonify({"error": "User not found"}), 404
-        
+
     username = data.get("username")
     email = data.get("email")
-    
-    if username is not None:
-        if not isinstance(username, str):
-            return jsonify({"error": "username must be a string"}), 400
-        user.username = username
-        
-    if email is not None:
-        if not isinstance(email, str):
-            return jsonify({"error": "email must be a string"}), 400
-        user.email = email
-        
+
+    if username is not None and not isinstance(username, str):
+        return jsonify({"error": "username must be a string"}), 400
+    if email is not None and not isinstance(email, str):
+        return jsonify({"error": "email must be a string"}), 400
+
     try:
-        user.save()
+        user = update_user(user_id, username=username, email=email)
         return jsonify(serialize_user(user)), 200
-    except peewee.IntegrityError:
-        return jsonify({"error": "username or email already exists"}), 409
+    except peewee.PeeweeException as e:
+        if isinstance(e, peewee.IntegrityError):
+            return jsonify({"error": "username or email already exists"}), 409
+        return jsonify({"error": "User not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 
+@users_bp.route('/<int:user_id>', methods=['DELETE'])
+def delete_user_route(user_id):
+    """
+    Delete a user by ID
+    ---
+    parameters:
+      - name: user_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: User deleted
+      404:
+        description: User not found
+    """
+    try:
+        user = delete_user(user_id)
+        return jsonify(serialize_user(user)), 200
+    except Exception:
+        return jsonify({"error": "User not found"}), 404

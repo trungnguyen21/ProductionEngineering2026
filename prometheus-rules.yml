@@ -1,0 +1,72 @@
+groups:
+  - name: flask-recording-rules
+    rules:
+      - record: app:http_requests:rate5m
+        expr: sum(rate(http_requests_total[5m]))
+
+      - record: app:http_error_ratio:rate5m
+        expr: |
+          sum(rate(http_request_errors_total[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total[5m])), 1)
+
+      - record: app:http_latency_p95_seconds:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - record: app:http_latency_p99_seconds:5m
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - record: app:cache_hit_ratio:5m
+        expr: |
+          sum(rate(cache_hits_total[5m]))
+          /
+          clamp_min(sum(rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])), 1)
+
+      - record: app:db_retry_rate:5m
+        expr: sum(rate(db_retry_attempts_total[5m]))
+
+  - name: flask-alert-rules
+    rules:
+      - alert: FlaskHighErrorRatio
+        expr: app:http_error_ratio:rate5m > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error ratio"
+          description: "HTTP error ratio is above 5% for 5 minutes."
+
+      - alert: FlaskHighP95Latency
+        expr: app:http_latency_p95_seconds:5m > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency"
+          description: "HTTP p95 latency is above 500ms for 10 minutes."
+
+      - alert: FlaskDbPoolNearExhaustion
+        expr: db_pool_in_use > 18
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB pool near exhaustion"
+          description: "DB pool in-use connections are above 18."
+
+      - alert: HighDatabaseErrorRate
+        expr: increase(db_errors_total{job="flask-app"}[2m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Database Error Rate"
+          description: "Flask app has logged {{ $value }} database errors in the last 2 minutes. The database may be down or experiencing significant issues."

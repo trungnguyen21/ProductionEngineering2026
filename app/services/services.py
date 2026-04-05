@@ -1,48 +1,72 @@
-from peewee import fn
-from playhouse.shortcuts import model_to_dict
-from app.models.user import User
+import logging
+import random
+import time
+from functools import wraps
 
-def peewee_chunked(iterable, n):
-    for i in range(0, len(iterable), n):
-        yield iterable[i:i + n]
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from peewee import InterfaceError, OperationalError
 
-def serialize_user(user):
-    dt_str = user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at)
-    return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "created_at": dt_str.replace(" ", "T")
-    }
+from app.observability.metrics import (
+    DB_RETRIES_EXHAUSTED_TOTAL,
+    DB_RETRY_ATTEMPTS_TOTAL,
+    DB_RETRY_BACKOFF_SECONDS,
+)
 
-def serialize_event(event):
-    return {
-        "id": event.id,
-        "url_id": event.url_id,
-        "user_id": event.user_id,
-        "event_type": event.event_type,
-        "timestamp": event.timestamp.isoformat() if hasattr(event.timestamp, 'isoformat') else str(event.timestamp),
-        "details": event.details
-    }
+logger = logging.getLogger(__name__)
 
-def serialize_url(url):
-    return {
-        "id": url.id,
-        "user_id": url.user_id,
-        "short_code": url.short_code,
-        "original_url": url.original_url,
-        "title": url.title,
-        "is_active": url.is_active,
-        "created_at": url.created_at.isoformat() if hasattr(url.created_at, 'isoformat') else str(url.created_at),
-        "updated_at": url.updated_at.isoformat() if hasattr(url.updated_at, 'isoformat') else str(url.updated_at)
-    }
+limiter = Limiter(key_func=get_remote_address)
 
+RETRYABLE_ERRORS = (OperationalError, InterfaceError, ConnectionError)
 
+def retry_db(max_retries=3, base_delay=0.05):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return fn(*args, **kwargs)
+                except RETRYABLE_ERRORS as exc:
+                    from app.database import db
 
-def get_users(page: int, per_page: int):
-    if page is None or per_page is None:
-        query = User.select()
-    else:
-        query = User.select().paginate(page, per_page)
-    
-    return [serialize_user(user) for user in query]
+                    db.close()
+                    db.connect(reuse_if_open=True)
+
+                    error_type = type(exc).__name__
+                    DB_RETRY_ATTEMPTS_TOTAL.labels(function_name=fn.__name__, error_type=error_type).inc()
+
+                    if attempt == max_retries - 1:
+                        DB_RETRIES_EXHAUSTED_TOTAL.labels(
+                            function_name=fn.__name__,
+                            error_type=error_type,
+                        ).inc()
+                        logger.error(
+                            "db.retry.exhausted",
+                            extra={
+                                "function_name": fn.__name__,
+                                "max_retries": max_retries,
+                                "error_type": error_type,
+                            },
+                        )
+                        raise
+
+                    delay = base_delay * (2**attempt)
+                    jitter = random.uniform(0, delay * 0.2)
+                    sleep_for = delay + jitter
+                    DB_RETRY_BACKOFF_SECONDS.labels(function_name=fn.__name__).observe(sleep_for)
+
+                    logger.warning(
+                        "db.retry.scheduled",
+                        extra={
+                            "function_name": fn.__name__,
+                            "attempt": attempt + 1,
+                            "max_retries": max_retries,
+                            "backoff_seconds": round(sleep_for, 4),
+                            "error_type": error_type,
+                        },
+                    )
+                    time.sleep(sleep_for)
+
+        return wrapper
+
+    return decorator

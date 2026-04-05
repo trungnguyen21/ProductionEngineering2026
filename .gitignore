@@ -30,5 +30,8 @@ uv.lock
 .DS_Store
 Thumbs.db
 
+# Deploy state
+deploy/.active_slot
+
 # Judging (not visible to participants)
 judging/

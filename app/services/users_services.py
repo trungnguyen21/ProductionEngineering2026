@@ -77,8 +77,6 @@ def bulk_import_users(file_stream):
     Import users from a CSV file stream.
     Returns the number of imported users.
     """
-    User.create_table(safe=True)
-
     stream = io.StringIO(file_stream.read().decode("UTF8"), newline=None)
     csv_input = csv.DictReader(stream)
 

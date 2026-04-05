@@ -9,7 +9,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Copy dependency files first for layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
 
 # Install dependencies into the system Python (no venv needed in container)
 RUN uv pip install --system --no-cache -r pyproject.toml
@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 8000
 
 # Use gunicorn for production (more stable than Flask dev server)
-CMD ["python", "-m", "gunicorn", "--workers", "2", "--bind", "0.0.0.0:8000", "--timeout", "30", "run:app"]
+CMD ["python", "-m", "gunicorn", "--workers", "4", "--bind", "0.0.0.0:8000", "--timeout", "30", "run:app"]

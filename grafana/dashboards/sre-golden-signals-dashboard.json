@@ -145,7 +145,7 @@
 			"targets": [
 				{
 					"editorMode": "code",
-					"expr": "100 * sum(rate(http_request_errors_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])) / clamp_min(sum(rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])), 1)",
+					"expr": "100 * sum(rate(http_request_errors_total{route=~\"$route\",method=~\"$method\",status!~\"429|409\"}[$__rate_interval])) / clamp_min(sum(rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])), 1)",
 					"legendFormat": "error_ratio_pct",
 					"range": true,
 					"refId": "A"
@@ -355,7 +355,7 @@
 			"targets": [
 				{
 					"editorMode": "code",
-					"expr": "100 - (100 * sum(rate(http_request_errors_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])) / clamp_min(sum(rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])), 1))",
+					"expr": "100 - (100 * sum(rate(http_request_errors_total{route=~\"$route\",method=~\"$method\",status!~\"429|409\"}[$__rate_interval])) / clamp_min(sum(rate(http_requests_total{route=~\"$route\",method=~\"$method\"}[$__rate_interval])), 1))",
 					"legendFormat": "availability_pct",
 					"range": true,
 					"refId": "A"

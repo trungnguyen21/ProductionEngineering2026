@@ -49,6 +49,7 @@ services:
     container_name: hackathon_grafana
     volumes:
       - grafana_data:/var/lib/grafana
+      - ../grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     environment:
       - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost/grafana/}
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
@@ -66,6 +67,45 @@ services:
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+    networks:
+      - infra
+
+  loki:
+    image: grafana/loki:latest
+    container_name: hackathon_loki
+    volumes:
+      - ../loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ../loki-rules.yml:/loki/prom-rules/AppErrors/rules.yml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - infra
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: hackathon_promtail
+    volumes:
+      - ../promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+    networks:
+      - infra
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: hackathon_alertmanager
+    volumes:
+      - ../alertmanager.yml:/etc/alertmanager/config.template.yml:ro
+    env_file:
+      - ../.env
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    command:
+      - '/bin/sh'
+      - '-c'
+      - 'sed "s|\$${DISCORD_WEBHOOK_URL}|$${DISCORD_WEBHOOK_URL}|g" /etc/alertmanager/config.template.yml > /etc/alertmanager/config.yml && /bin/alertmanager --config.file=/etc/alertmanager/config.yml'
     restart: unless-stopped
     networks:
       - infra

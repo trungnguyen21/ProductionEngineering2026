@@ -126,7 +126,7 @@ services:
     entrypoint:
       - /bin/sh
       - -c
-      - "echo -n \"$$DISCORD_WEBHOOK_URL\" > /tmp/discord_webhook && exec /bin/alertmanager --config.file=/etc/alertmanager/config.yml"
+      - "sed \"s|\\$${DISCORD_WEBHOOK_URL}|$$DISCORD_WEBHOOK_URL|g\" /etc/alertmanager/config.yml > /tmp/config.yml && exec /bin/alertmanager --config.file=/tmp/config.yml"
     restart: unless-stopped
 
 volumes:

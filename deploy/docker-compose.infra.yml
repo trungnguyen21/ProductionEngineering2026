@@ -1,0 +1,99 @@
+services:
+  db:
+    image: postgres:15
+    container_name: hackathon_db
+    environment:
+      - POSTGRES_DB=hackathon_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hackathon_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - infra
+
+  redis:
+    image: redis:alpine
+    container_name: hackathon_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - infra
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hackathon_prometheus
+    volumes:
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    restart: unless-stopped
+    networks:
+      - infra
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hackathon_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost/grafana/}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - infra
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: hackathon_cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+    networks:
+      - infra
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./upstream.conf:/etc/nginx/conf.d/upstream.conf:ro
+    depends_on:
+      - grafana
+    restart: unless-stopped
+    networks:
+      - infra
+      - edge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  infra:
+    driver: bridge
+    name: hackathon_infra
+  edge:
+    driver: bridge
+    name: hackathon_edge

@@ -1,0 +1,32 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  # Gate: reuse the existing CI workflow's test job
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /root/ProductionEngineering2026
+            ./deploy/deploy.sh

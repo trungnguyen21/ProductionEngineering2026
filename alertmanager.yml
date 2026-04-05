@@ -15,6 +15,6 @@ route:
 receivers:
   - name: 'discord'
     discord_configs:
-      - webhook_url_file: "${DISCORD_WEBHOOK_URL}"
+      - webhook_url: "${DISCORD_WEBHOOK_URL}"
         title: '{{ .Status | toUpper }} - {{ .GroupLabels.alertname }}'
         message: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'

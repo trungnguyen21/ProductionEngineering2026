@@ -141,7 +141,9 @@ def create_user_route():
         user = create_user(username=username, email=email)
         return jsonify(serialize_user(user)), 201
     except peewee.IntegrityError:
-        return jsonify({"error": "username or email already exists"}), 409
+        from app.models.user import User
+        existing_user = User.get((User.username == username) | (User.email == email))
+        return jsonify(serialize_user(existing_user)), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 

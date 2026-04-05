@@ -121,9 +121,12 @@ def setup_http_metrics(app) -> None:
         if started is None:
             return response
 
+        route = _route_label()
+        if route in ("/metrics", "/health", "/ready"):
+            return response
+
         duration = time.perf_counter() - started
         method = request.method
-        route = _route_label()
         status = str(response.status_code)
 
         HTTP_REQUESTS_TOTAL.labels(method=method, route=route, status=status).inc()

@@ -17,9 +17,14 @@ def serialize_event(event):
 
 
 @retry_db()
-def list_events():
-    """List all events."""
-    return list(Event.select())
+def list_events(url_id: int = None, event_type: str = None):
+    """List all events with optional filters."""
+    query = Event.select()
+    if url_id is not None:
+        query = query.where(Event.url_id == url_id)
+    if event_type is not None:
+        query = query.where(Event.event_type == event_type)
+    return list(query)
 
 
 @retry_db()

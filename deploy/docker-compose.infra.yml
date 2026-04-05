@@ -103,9 +103,7 @@ services:
     environment:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     command:
-      - '/bin/sh'
-      - '-c'
-      - 'sed "s|\$${DISCORD_WEBHOOK_URL}|$${DISCORD_WEBHOOK_URL}|g" /etc/alertmanager/config.template.yml > /etc/alertmanager/config.yml && /bin/alertmanager --config.file=/etc/alertmanager/config.yml'
+      - '--config.file=/etc/alertmanager/config.yml'    
     restart: unless-stopped
     networks:
       - infra

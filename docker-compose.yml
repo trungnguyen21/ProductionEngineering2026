@@ -121,7 +121,6 @@ services:
       - "9093:9093"
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/config.yml:ro
-      - ./discord-webhook.txt:/etc/alertmanager/discord-webhook.txt:ro
     command:
       - '--config.file=/etc/alertmanager/config.yml'
     restart: unless-stopped

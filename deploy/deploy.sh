@@ -64,7 +64,8 @@ log "Starting deployment ..."
 # 1. Pull latest code
 cd "$REPO_DIR"
 log "Pulling latest code ..."
-git pull --ff-only origin main
+git fetch origin main
+git reset --hard origin/main
 
 # 2. Ensure shared infra is running
 log "Starting shared infrastructure ..."

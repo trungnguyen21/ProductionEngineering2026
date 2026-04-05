@@ -1,0 +1,12 @@
+groups:
+  - name: AppErrors
+    rules:
+      - alert: DatabaseConnectionError
+        expr: |
+          sum(rate({container="hackathon_web"} |= "error" |= "database"[1m])) > 0
+        for: 1s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database Connection Error Detected"
+          description: "The web container has logged a database connection error. Snapshot: {{ $labels.container }}"

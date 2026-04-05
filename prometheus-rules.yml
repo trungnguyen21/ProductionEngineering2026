@@ -62,11 +62,11 @@ groups:
           summary: "DB pool near exhaustion"
           description: "DB pool in-use connections are above 18."
 
-      - alert: FlaskAppDown
-        expr: up{job="flask-app"} == 0
+      - alert: HighDatabaseErrorRate
+        expr: increase(db_errors_total{job="flask-app"}[2m]) > 5
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "Flask app is down"
-          description: "Prometheus cannot scrape the Flask app metrics endpoint."
+          summary: "High Database Error Rate"
+          description: "Flask app has logged {{ $value }} database errors in the last 2 minutes. The database may be down or experiencing significant issues."

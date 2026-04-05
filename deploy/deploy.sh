@@ -10,6 +10,8 @@ UPSTREAM_CONF="$DEPLOY_DIR/upstream.conf"
 
 BLUE_PORT=8001
 GREEN_PORT=8002
+BLUE_CONTAINER=hackathon_web_blue
+GREEN_CONTAINER=hackathon_web_green
 HEALTH_RETRIES=20
 HEALTH_INTERVAL=3
 
@@ -42,13 +44,13 @@ health_check() {
 }
 
 swap_upstream() {
-    local port=$1
+    local container=$1
     cat > "$UPSTREAM_CONF" <<EOF
 upstream app_backend {
-    server 127.0.0.1:${port};
+    server ${container}:8000;
 }
 EOF
-    log "Upstream swapped to port ${port}"
+    log "Upstream swapped to ${container}"
 }
 
 reload_nginx() {
@@ -73,10 +75,12 @@ ACTIVE=$(get_active_slot)
 if [[ "$ACTIVE" == "blue" ]]; then
     TARGET="green"
     TARGET_PORT=$GREEN_PORT
+    TARGET_CONTAINER=$GREEN_CONTAINER
     OLD_COMPOSE="deploy/docker-compose.blue.yml"
 else
     TARGET="blue"
     TARGET_PORT=$BLUE_PORT
+    TARGET_CONTAINER=$BLUE_CONTAINER
     OLD_COMPOSE="deploy/docker-compose.green.yml"
 fi
 TARGET_COMPOSE="deploy/docker-compose.${TARGET}.yml"
@@ -94,7 +98,7 @@ if ! health_check "$TARGET_PORT"; then
 fi
 
 # 6. Swap Nginx upstream & reload
-swap_upstream "$TARGET_PORT"
+swap_upstream "$TARGET_CONTAINER"
 reload_nginx
 
 # 7. Tear down old slot (if any)

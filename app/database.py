@@ -60,6 +60,7 @@ def init_db(app):
         user=os.environ.get("DATABASE_USER", "postgres"),
         password=os.environ.get("DATABASE_PASSWORD", "postgres"),
         options="-c statement_timeout=2000",
+        connect_timeout=int(os.environ.get("DATABASE_CONNECT_TIMEOUT", 5)),
     )
     db.initialize(database)
 
@@ -68,8 +69,12 @@ def init_db(app):
         try:
             db.connect(reuse_if_open=True)
             observe_db_pool_state(database)
+        except OperationalError:
+            logger.warning("db.connect.failed.operational_error")
+            return jsonify({"error": "database_unavailable", "message": "Database connection failed"}), 503
         except Exception:
-            logger.exception("db.connect.failed")
+            logger.exception("db.connect.failed.unexpected")
+            return jsonify({"error": "internal_error", "message": "An unexpected error occurred"}), 500
 
     @app.teardown_request
     def _db_close(_exc):

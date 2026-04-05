@@ -63,8 +63,8 @@ groups:
           description: "DB pool in-use connections are above 18."
 
       - alert: HighDatabaseErrorRate
-        expr: increase(db_errors_total{job="flask-app"}[2m]) > 5
-        for: 2m
+        expr: increase(db_errors_total{job="flask-app"}[30s]) > 0
+        for: 5s
         labels:
           severity: critical
         annotations:

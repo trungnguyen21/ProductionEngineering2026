@@ -65,7 +65,7 @@ A minimal Flask-based web service for URL shortener, featuring PostgreSQL persis
 ## Monitoring
 
 - Prometheus scrapes application and cAdvisor metrics
-- Grafana dashboard for SRE golden signals and system resources
+- Grafana dashboard for SRE signals and system resources
 - Custom metrics via `app/observability/metrics.py`
 
 ## Caching
@@ -75,19 +75,13 @@ A minimal Flask-based web service for URL shortener, featuring PostgreSQL persis
 
 ## Quick Start
 
-1. Install dependencies: `uv sync`
-2. Create DB: `createdb hackathon_db`
-3. Configure `.env` (see `.env.example`)
-4. Run: `uv run run.py`
-5. Run tests: `uv run -m pytest`
+1. Install [Docker](https://www.docker.com/)
+2. Run `cp .env.example .env` to create your .env file
+- See this [guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) for getting your Discord Webhook URL
+2. Run `docker compose up -d` to run in detached mode
+3. See your app in `http://localhost:8000`
 
 ## Testing
 
 - All tests in `tests/` (unit and integration)
 - Run with `pytest`
-
-## Notes
-
-- See `docs/` for design docs (caching, database, failure modes)
-- Seed data in `artifacts/`
-- Docker Compose sets up app, DB, Redis, Prometheus, cAdvisor

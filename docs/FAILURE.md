@@ -116,11 +116,3 @@ BEGIN; LOCK TABLE users IN ACCESS EXCLUSIVE MODE;
 # Hammer with 50 concurrent requests
 ab -n 500 -c 50 http://localhost:8000/users
 ```
-
----
-
-## Recovery Checklist
-
-- [ ] DB restarted → wait for `/ready` to return 200 before sending traffic
-- [ ] App restarted → watch `docker ps` for `healthy` status
-- [ ] After incident → check logs: `docker logs hackathon_web --tail 100`

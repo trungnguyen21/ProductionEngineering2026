@@ -35,3 +35,5 @@ deploy/.active_slot
 
 # Judging (not visible to participants)
 judging/
+
+artifacts/

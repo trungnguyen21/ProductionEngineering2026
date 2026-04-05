@@ -47,17 +47,22 @@ def create_app():
         from app.database import db
         db_ok = True
         try:
-            db.execute_sql("SELECT 1;")
-        except Exception:
+            # Use a simple query to verify connectivity
+            with db.connection_context():
+                db.execute_sql("SELECT 1;")
+        except Exception as e:
+            logger.warning("health_check.db_failed: %s", e)
             db_ok = False
+        
         status = "ok" if db_ok else "degraded"
         code = 200 if db_ok else 503
         return jsonify(status=status, db=db_ok), code
 
     @app.route("/ready")
     def ready():
-        # A simpler check for Docker's healthcheck
-        return jsonify(status="ready"), 200
+        # Readiness check should ideally reflect if the service is ready to handle traffic.
+        # If DB is down, the service cannot handle most traffic, so we return 503.
+        return health()
 
     # ── Global JSON error handlers ──────────────────────────────────────────
 

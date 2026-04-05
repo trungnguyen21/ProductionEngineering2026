@@ -5,6 +5,16 @@ def test_create_user(client):
     assert response.status_code == 201
     assert response.json["username"] == "user1"
 
+def test_create_duplicate_user(client):
+    response1 = client.post('/users', json={"username": "duplicate_user", "email": "duplicate@a.com"})
+    assert response1.status_code == 201
+    user_id = response1.json["id"]
+
+    response2 = client.post('/users', json={"username": "duplicate_user", "email": "duplicate@a.com"})
+    assert response2.status_code == 201
+    assert response2.json["id"] == user_id
+    assert response2.json["username"] == "duplicate_user"
+
 def test_create_user_invalid(client):
     response = client.post('/users', json={"username": 123, "email": "userinvalid@a.com"})
     assert response.status_code == 400

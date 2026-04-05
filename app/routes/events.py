@@ -15,7 +15,17 @@ def list_events_route():
       200:
         description: A list of Event objects
     """
-    events = list_events()
+    payload = request.get_json(silent=True) or {}
+    url_id = request.args.get('url_id', type=int) if 'url_id' in request.args else payload.get('url_id')
+    event_type = request.args.get('event_type') if 'event_type' in request.args else payload.get('event_type')
+    
+    if url_id is not None:
+        try:
+            url_id = int(url_id)
+        except ValueError:
+            pass
+
+    events = list_events(url_id=url_id, event_type=event_type)
     return jsonify([serialize_event(e) for e in events]), 200
 
 

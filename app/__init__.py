@@ -44,8 +44,16 @@ def create_app():
 
     @app.route("/health")
     def health():
+        return jsonify("Server is running"), 200
+
+    @app.route("/ready")
+    def ready():
         from app.database import db
+        from app.services.cache import get_redis
+        
         db_ok = True
+        redis_ok = True
+        
         try:
             # Use a simple query to verify connectivity
             with db.connection_context():
@@ -53,16 +61,20 @@ def create_app():
         except Exception as e:
             logger.warning("health_check.db_failed: %s", e)
             db_ok = False
-        
-        status = "ok" if db_ok else "degraded"
-        code = 200 if db_ok else 503
-        return jsonify(status=status, db=db_ok), code
 
-    @app.route("/ready")
-    def ready():
-        # Readiness check should ideally reflect if the service is ready to handle traffic.
-        # If DB is down, the service cannot handle most traffic, so we return 503.
-        return health()
+        try:
+            r = get_redis()
+            if r is None:
+                redis_ok = False
+            else:
+                r.ping()
+        except Exception as e:
+            logger.warning("health_check.redis_failed: %s", e)
+            redis_ok = False
+        
+        status = "ok" if (db_ok and redis_ok) else "degraded"
+        code = 200 if db_ok else 503
+        return jsonify(status=status, db=db_ok, redis=redis_ok), code
 
     # ── Global JSON error handlers ──────────────────────────────────────────
 

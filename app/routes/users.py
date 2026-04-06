@@ -140,10 +140,12 @@ def create_user_route():
     try:
         user = create_user(username=username, email=email)
         return jsonify(serialize_user(user)), 201
-    except peewee.IntegrityError:
+    except peewee.IntegrityError as e:
         from app.models.user import User
-        existing_user = User.get((User.username == username) | (User.email == email))
-        return jsonify(serialize_user(existing_user)), 201
+        existing_user = User.get_or_none((User.username == username) | (User.email == email))
+        if existing_user:
+            return jsonify(serialize_user(existing_user)), 201
+        return jsonify({"error": "Integrity constraint violated: " + str(e)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 

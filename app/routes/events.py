@@ -71,6 +71,9 @@ def create_event_route():
         return jsonify({"error": "url_id is required"}), 400
     if not event_type:
         return jsonify({"error": "event_type is required"}), 400
+        
+    if details is not None and not isinstance(details, dict):
+        return jsonify({"error": "details must be an object"}), 400
 
     try:
         event = create_event(url_id=url_id, event_type=event_type, user_id=user_id, details=details)

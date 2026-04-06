@@ -132,7 +132,7 @@ def setup_http_metrics(app) -> None:
         HTTP_REQUESTS_TOTAL.labels(method=method, route=route, status=status).inc()
         HTTP_REQUEST_DURATION_SECONDS.labels(method=method, route=route, status=status).observe(duration)
 
-        if response.status_code >= 400:
+        if response.status_code >= 500:
             error_type = "client_error" if response.status_code < 500 else "server_error"
             HTTP_REQUEST_ERRORS_TOTAL.labels(
                 method=method,

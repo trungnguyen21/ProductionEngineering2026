@@ -67,7 +67,13 @@ OpenTelemetry worth mentioning here. An Enterprise solution with metrics, loggin
 
 It did take much longer to setup these 2 instead of adding 5 lines of code for Dozzle, but with built-in functionality within Grafana dashboard, and logging query based on container, I think it was worth it compared to at-the-moment logging snapshot that Dozzle provided.
 
-## 9. What’s next
-- Scalability is the elephant in the room: my app struggled to maintain sub 5 seconds p95 when there are 50+ users.
-- Improve caching: the dashboard is showing only 50% hit rate -> should be more for an URL shortener app.
-- Dedicated task queue: proper distributed worker for `/users/bulk` endpoint, fully customized with DLQ, SSE to notify client instead of polling.
+## 9. Docker Compose Policy:
+- Utilized Docker Compose `deploy` to spins up 2 replicas of the web server
+- Utilized `unless-stopped` restart policy to restart container on non-zero exits
+**Trade off**: 
+- Instead of using `on-failure`, I used this to restart the container in *almost* all scenarios (crashes, reboot, or successful exits, etc.) -> suitable for prod servers since it needs high availability
+- Compared to `on-failure` with `max-retries`, this policy will restart a container with a specified number of attempts -> we don't want that for our server to be down after like 3 retries
+- Downside of `unless-stopped`: infinitely retry when the container failed unless `docker stop`
+
+## 10. Locust load testing:
+- Define 3 business-logic endpoints to test: `/urls`, ``

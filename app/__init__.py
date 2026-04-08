@@ -1,5 +1,6 @@
 import logging
 import os
+import socket
 
 import peewee
 
@@ -45,6 +46,10 @@ def create_app():
     @app.route("/health")
     def health():
         return jsonify("Server is running"), 200
+    
+    @app.route("/container")
+    def get_container_id():
+        return jsonify(f"Container ID: {socket.gethostname()}"), 200
 
     @app.route("/ready")
     def ready():

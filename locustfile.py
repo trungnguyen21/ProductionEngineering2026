@@ -36,25 +36,9 @@ class AppObservabilityUser(HttpUser):
                 self.user_id = body.get("id")
                 response.success()
             elif response.status_code == 409:
-                response.success()
+                response.success() # user already exist - rare case
             else:
                 response.failure(f"unexpected status while creating seed user: {response.status_code}")
-
-    @task(8)
-    def list_users(self) -> None:
-        with self.client.get(
-            "/users?page=1&per_page=25",
-            headers={"X-Request-ID": _request_id()},
-            name="GET /users",
-            catch_response=True,
-        ) as response:
-            if response.status_code != 200:
-                response.failure(f"unexpected status: {response.status_code}")
-                return
-
-            rid = response.headers.get("X-Request-ID")
-            if not rid:
-                response.failure("missing X-Request-ID header")
 
     @task(6)
     def list_urls(self) -> None:
@@ -113,42 +97,3 @@ class AppObservabilityUser(HttpUser):
         ) as response:
             if response.status_code not in [302, 301]:
                 response.failure(f"unexpected redirect status: {response.status_code}")
-
-    @task(3)
-    def create_event(self) -> None:
-        if not self.user_id:
-            self._create_seed_user()
-            if not self.user_id:
-                return
-
-        with self.client.get(
-            "/urls",
-            headers={"X-Request-ID": _request_id()},
-            name="GET /urls (for event)",
-            catch_response=True,
-        ) as response:
-            if response.status_code != 200:
-                response.failure("unable to fetch urls for event")
-                return
-
-            urls = response.json()
-            if not urls:
-                response.success()
-                return
-            url_id = random.choice(urls).get("id")
-
-        payload = {
-            "url_id": url_id,
-            "user_id": self.user_id,
-            "event_type": random.choice(["click", "view", "redirect"]),
-            "details": {"source": "locust"},
-        }
-        with self.client.post(
-            "/events",
-            json=payload,
-            headers={"X-Request-ID": _request_id()},
-            name="POST /events",
-            catch_response=True,
-        ) as response:
-            if response.status_code not in (201, 404):
-                response.failure(f"unexpected status creating event: {response.status_code}")

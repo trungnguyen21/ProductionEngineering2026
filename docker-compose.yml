@@ -68,6 +68,10 @@ services:
       start_period: 15s
     networks:
       - app_network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest

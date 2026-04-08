@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 8000
 
 # Use gunicorn for production (more stable than Flask dev server)
-CMD ["python", "-m", "gunicorn", "--workers", "4", "--threads", "4", "--bind", "0.0.0.0:8000", "--timeout", "30", "run:app"]
+CMD ["python", "-m", "gunicorn", "--workers", "2", "--threads", "4", "--bind", "0.0.0.0:8000", "--timeout", "30", "run:app"]

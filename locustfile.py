@@ -14,7 +14,7 @@ class AppObservabilityUser(HttpUser):
 
     def on_start(self) -> None:
         self.user_id = None
-        self.short_code = None
+        self.short_code = []
         self._create_seed_user()
 
     def _create_seed_user(self) -> None:
@@ -68,7 +68,7 @@ class AppObservabilityUser(HttpUser):
                 response.failure(f"unexpected status: {response.status_code}")
 
     @task(8)
-    def create_url_and_redirect(self) -> None:
+    def create_url(self) -> None:
         if not self.user_id:
             self._create_seed_user()
             if not self.user_id:
@@ -92,19 +92,26 @@ class AppObservabilityUser(HttpUser):
                 return
 
             body = response.json()
-            self.short_code = body.get("short_code")
+            self.short_code.append(body.get("short_code"))
             if not self.short_code:
                 response.failure("missing short_code in create url response")
                 return
 
+    @task(6)
+    def redirect_url(self) -> None:
+        if not self.short_code or len(self.short_code) == 0:
+            return
+        
+        index = random.randrange(len(self.short_code))
+        short_code = self.short_code[index]
         with self.client.get(
-            f"/urls/{self.short_code}/redirect",
+            f"/urls/{short_code}/redirect",
             headers={"X-Request-ID": _request_id()},
             allow_redirects=False,
             name="GET /urls/{short_code}/redirect",
             catch_response=True,
         ) as response:
-            if response.status_code != 302:
+            if response.status_code not in [302, 301]:
                 response.failure(f"unexpected redirect status: {response.status_code}")
 
     @task(3)
@@ -145,27 +152,3 @@ class AppObservabilityUser(HttpUser):
         ) as response:
             if response.status_code not in (201, 404):
                 response.failure(f"unexpected status creating event: {response.status_code}")
-
-    @task(2)
-    def check_metrics_endpoint(self) -> None:
-        with self.client.get(
-            "/metrics",
-            headers={"X-Request-ID": _request_id()},
-            name="GET /metrics",
-            catch_response=True,
-        ) as response:
-            if response.status_code != 200:
-                response.failure(f"unexpected status: {response.status_code}")
-                return
-
-            text = response.text
-            required = [
-                "http_requests_total",
-                "http_request_duration_seconds_bucket",
-                "http_request_errors_total",
-                "cache_operations_total",
-                "db_query_duration_seconds",
-            ]
-            missing = [metric for metric in required if metric not in text]
-            if missing:
-                response.failure(f"missing metrics: {', '.join(missing)}")

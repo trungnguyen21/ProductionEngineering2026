@@ -76,4 +76,7 @@ It did take much longer to setup these 2 instead of adding 5 lines of code for D
 - Downside of `unless-stopped`: infinitely retry when the container failed unless `docker stop`
 
 ## 10. Locust load testing:
-- Define 3 business-logic endpoints to test: `/urls`, ``
+- Define 2 business-logic endpoints to test: `/urls`, `redirect`
+- Define the weights (possibility of the task being run over the other)
+
+## 11. NGINX policy (WIP)

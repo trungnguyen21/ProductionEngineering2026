@@ -86,64 +86,64 @@ services:
     networks:
       - app_network
 
-  grafana:
-    image: grafana/grafana:latest
-    environment:
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-    depends_on:
-      - prometheus
-    restart: unless-stopped
-    networks:
-      - app_network
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   environment:
+  #     - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
+  #     - GF_SERVER_SERVE_FROM_SUB_PATH=true
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #     - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+  #   depends_on:
+  #     - prometheus
+  #   restart: unless-stopped
+  #   networks:
+  #     - app_network
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    restart: unless-stopped
-    networks:
-      - app_network
+  # cadvisor:
+  #   image: gcr.io/cadvisor/cadvisor:latest
+  #   volumes:
+  #     - /:/rootfs:ro
+  #     - /var/run:/var/run:rw
+  #     - /sys:/sys:ro
+  #     - /var/lib/docker/:/var/lib/docker:ro
+  #   restart: unless-stopped
+  #   networks:
+  #     - app_network
 
-  loki:
-    image: grafana/loki:latest
-    volumes:
-      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
-      - ./loki-rules.yml:/loki/prom-rules/AppErrors/rules.yml:ro
-    command: -config.file=/etc/loki/local-config.yaml
-    restart: unless-stopped
-    networks:
-      - app_network
+  # loki:
+  #   image: grafana/loki:latest
+  #   volumes:
+  #     - ./loki-config.yml:/etc/loki/local-config.yaml:ro
+  #     - ./loki-rules.yml:/loki/prom-rules/AppErrors/rules.yml:ro
+  #   command: -config.file=/etc/loki/local-config.yaml
+  #   restart: unless-stopped
+  #   networks:
+  #     - app_network
 
-  promtail:
-    image: grafana/promtail:latest
-    volumes:
-      - ./promtail-config.yml:/etc/promtail/config.yml:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: -config.file=/etc/promtail/config.yml
-    restart: unless-stopped
-    networks:
-      - app_network
+  # promtail:
+  #   image: grafana/promtail:latest
+  #   volumes:
+  #     - ./promtail-config.yml:/etc/promtail/config.yml:ro
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   command: -config.file=/etc/promtail/config.yml
+  #   restart: unless-stopped
+  #   networks:
+  #     - app_network
 
-  alertmanager:
-    image: prom/alertmanager:latest
-    environment:
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
-    volumes:
-      - ./alertmanager.yml:/etc/alertmanager/config.yml:ro
-    entrypoint:
-      - /bin/sh
-      - -c
-      - "sed \"s|\\$${DISCORD_WEBHOOK_URL}|$$DISCORD_WEBHOOK_URL|g\" /etc/alertmanager/config.yml > /tmp/config.yml && exec /bin/alertmanager --config.file=/tmp/config.yml"
-    restart: unless-stopped
-    networks:
-      - app_network
+  # alertmanager:
+  #   image: prom/alertmanager:latest
+  #   environment:
+  #     - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+  #   volumes:
+  #     - ./alertmanager.yml:/etc/alertmanager/config.yml:ro
+  #   entrypoint:
+  #     - /bin/sh
+  #     - -c
+  #     - "sed \"s|\\$${DISCORD_WEBHOOK_URL}|$$DISCORD_WEBHOOK_URL|g\" /etc/alertmanager/config.yml > /tmp/config.yml && exec /bin/alertmanager --config.file=/tmp/config.yml"
+  #   restart: unless-stopped
+  #   networks:
+  #     - app_network
 
 volumes:
   postgres_data:

@@ -79,4 +79,16 @@ It did take much longer to setup these 2 instead of adding 5 lines of code for D
 - Define 2 business-logic endpoints to test: `/urls`, `redirect`
 - Define the weights (possibility of the task being run over the other)
 
-## 11. NGINX policy (WIP)
+## 11. NGINX policy (WIP):
+- Decided to use 2 replicas (Low RAM system on VM host)
+- Use `upstream.conf` to configure a load balancer using `least_conn` policy instead of `round robin`
+-> More reliable for unpredictable connection requests from locust
+
+## 12. Bottleneck:
+- The server lags and p99 jumped to above 1000ms -> something was wrong
+- I checked the logs, everything looking good, `docker stats` showed less than 100% CPU usage -> must be the memory
+- Check `htop`: *aha* our RAM is at 97%, 0% being swapped (that's weird)
+- Solution: configure `gunicorn` to have *less* worker and more threads! To utilize all the CPU cores (a modestly 2-core Premium Intel CPU), I decided on 2 workers and 4 threads
+--> Runs stable at sub-1000ms for 50 concurrent users, breaking point at 100 users
+
+Hypothesis: too much logging - next 2 costing processes are Prometheus and cAdvisor

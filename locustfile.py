@@ -40,18 +40,18 @@ class AppObservabilityUser(HttpUser):
             else:
                 response.failure(f"unexpected status while creating seed user: {response.status_code}")
 
-    @task(6)
-    def list_urls(self) -> None:
-        with self.client.get(
-            "/urls",
-            headers={"X-Request-ID": _request_id()},
-            name="GET /urls",
-            catch_response=True,
-        ) as response:
-            if response.status_code != 200:
-                response.failure(f"unexpected status: {response.status_code}")
+    # @task(6)
+    # def list_urls(self) -> None:
+    #     with self.client.get(
+    #         "/urls",
+    #         headers={"X-Request-ID": _request_id()},
+    #         name="GET /urls",
+    #         catch_response=True,
+    #     ) as response:
+    #         if response.status_code != 200:
+    #             response.failure(f"unexpected status: {response.status_code}")
 
-    @task(8)
+    @task(9)
     def create_url(self) -> None:
         if not self.user_id:
             self._create_seed_user()
@@ -81,7 +81,7 @@ class AppObservabilityUser(HttpUser):
                 response.failure("missing short_code in create url response")
                 return
 
-    @task(6)
+    @task(1)
     def redirect_url(self) -> None:
         if not self.short_code or len(self.short_code) == 0:
             return

@@ -9,10 +9,11 @@ from flask import Flask, jsonify
 from flasgger import Swagger
 from prometheus_flask_exporter import PrometheusMetrics
 
-from app.database import init_db, ensure_tables
+from app.database import check_db_connection, ensure_tables, init_db
 from app.observability.logging import configure_logging, setup_request_logging
 from app.observability.metrics import setup_http_metrics
 from app.routes import register_routes
+from app.services.cache import check_redis_connection, init_cache
 from app.services.services import limiter
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ def create_app():
 
     setup_request_logging(app)
     init_db(app)
+    init_cache(app)
 
     # One-time schema bootstrap on app startup.
     ensure_tables()
@@ -53,30 +55,9 @@ def create_app():
 
     @app.route("/ready")
     def ready():
-        from app.database import db
-        from app.services.cache import get_redis
-        
-        db_ok = True
-        redis_ok = True
-        
-        try:
-            # Use a simple query to verify connectivity
-            with db.connection_context():
-                db.execute_sql("SELECT 1;")
-        except Exception as e:
-            logger.warning("health_check.db_failed: %s", e)
-            db_ok = False
+        db_ok = check_db_connection()
+        redis_ok = check_redis_connection()
 
-        try:
-            r = get_redis()
-            if r is None:
-                redis_ok = False
-            else:
-                r.ping()
-        except Exception as e:
-            logger.warning("health_check.redis_failed: %s", e)
-            redis_ok = False
-        
         status = "ok" if (db_ok and redis_ok) else "degraded"
         code = 200 if db_ok else 503
         return jsonify(status=status, db=db_ok, redis=redis_ok), code

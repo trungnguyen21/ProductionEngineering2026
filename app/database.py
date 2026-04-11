@@ -3,6 +3,7 @@ import os
 import time
 
 from flask import jsonify
+from flask import has_request_context, request
 from peewee import DatabaseProxy, Model, OperationalError
 from playhouse.pool import PooledPostgresqlDatabase
 
@@ -12,6 +13,7 @@ from app.observability.metrics import (
     observe_db_pool_state,
 )
 from app.services.circuit_breaker import CircuitBreaker
+from app.config import PROBE_PATHS
 
 logger = logging.getLogger(__name__)
 db = DatabaseProxy()
@@ -19,6 +21,15 @@ db_breaker = CircuitBreaker(
     failure_threshold=3,
     recovery_timeout=10
 )
+
+
+def _is_probe_request() -> bool:
+    if not has_request_context():
+        return False
+
+    normalized_path = request.path.rstrip("/") or "/"
+    normalized_probe_paths = {path.rstrip("/") or "/" for path in PROBE_PATHS}
+    return normalized_path in normalized_probe_paths
 
 
 class BaseModel(Model):
@@ -41,23 +52,25 @@ class ObservableDatabasePool(PooledPostgresqlDatabase):
             if isinstance(exc, OperationalError):
                 db_breaker.record_failure()
             DB_ERRORS_TOTAL.labels(operation=operation, error_type=type(exc).__name__).inc()
-            logger.exception(
-                "db.query.failed",
-                extra={"operation": operation, "query_preview": (sql or "")[:120]},
-            )
+            if not _is_probe_request():
+                logger.exception(
+                    "db.query.failed",
+                    extra={"operation": operation, "query_preview": (sql or "")[:120]},
+                )
             raise
         finally:
             duration_s = time.perf_counter() - start
             DB_QUERY_DURATION_SECONDS.labels(operation=operation).observe(duration_s)
             observe_db_pool_state(self)
 
-            logger.info(
-                "db.query.completed",
-                extra={
-                    "operation": operation,
-                    "duration_ms": round(duration_s * 1000, 2),
-                },
-            )
+            if not _is_probe_request():
+                logger.info(
+                    "db.query.completed",
+                    extra={
+                        "operation": operation,
+                        "duration_ms": round(duration_s * 1000, 2),
+                    },
+                )
 
 
 def init_db(app):
@@ -94,6 +107,16 @@ def init_db(app):
     def handle_db_error(_e):
         return jsonify({"error": "database_unavailable", "message": "Service temporarily degraded"}), 503
 
+
+def check_db_connection() -> bool:
+    """Active database connectivity check for readiness endpoints."""
+    try:
+        with db.connection_context():
+            db.execute_sql("SELECT 1;")
+        return True
+    except Exception as exc:
+        logger.warning("db.ping.failed", extra={"error_type": type(exc).__name__})
+        return False
 
 def ensure_tables():
     """Create core tables in dependency order if they do not exist."""

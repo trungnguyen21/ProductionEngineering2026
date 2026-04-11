@@ -13,6 +13,7 @@ services:
 
   db:
     image: postgres:15
+    container_name: db
     environment:
       - POSTGRES_DB=hackathon_db
       - POSTGRES_USER=postgres
@@ -33,6 +34,7 @@ services:
 
   redis:
     image: redis:alpine
+    container_name: redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -73,6 +75,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.11.1
+    container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml

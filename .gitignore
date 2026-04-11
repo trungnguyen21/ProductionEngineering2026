@@ -37,3 +37,4 @@ deploy/.active_slot
 judging/
 
 artifacts/
+secrets/

@@ -68,7 +68,7 @@ def create_url_route():
         SHORT_URL_CREATE_TOTAL.inc()
         # Invalidate list cache
         cache_delete("urls:list:*")
-        return jsonify(serialize_url(url_entry)), 201
+        return jsonify(serialize_url(url_entry)), 500
     except User.DoesNotExist:
         return jsonify({"error": f"User {user_id} not found"}), 404
     except Exception as e:
